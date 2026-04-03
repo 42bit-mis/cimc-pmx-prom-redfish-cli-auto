@@ -1,7 +1,7 @@
 ---
 server:
-  hostname: 42bit-dc1-pve-cluster-001-cimc
-  description: 42bit DC1 Proxmox node 001
+  hostname: {YOUR_HOSTNAME}
+  description: {YOUR_DESCRIPTION}
   timezone: Europe/Vienna
 
 firmware_expected:
@@ -13,9 +13,9 @@ firmware_expected:
 cimc_network:
   apply: false
   dhcp: false
-  hostname: 42bit-dc1-pve-cluster-001-cimc
+  hostname: {YOUR_HOSTNAME}
   ipv4:
-    address: 10.42.72.227
+    address: {YOUR_IP}
     netmask: 255.255.255.0
     gateway: 10.42.72.251
   dns_servers:
@@ -29,7 +29,7 @@ services:
   ipmi_enabled: true
   ipmi_over_lan:
     privilege_level: admin
-    channel_security_key: "62F9F1BCE17D3C4B97BC29056E01F2F54EF40A0E"
+    channel_security_key: "{YOUR_KEY}"
   ntp:
     enabled: false
     servers: []
