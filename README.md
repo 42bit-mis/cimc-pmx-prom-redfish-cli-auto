@@ -1,4 +1,4 @@
-# CIMC MANUALY RAID CREATION ( read _HISTORY ) for Cisco UCS C220 M4
+# CIMC AUTO RAID CREATION ( read _HISTORY ) for Cisco UCS C220 M4
 
 This package is rebuilt for your standalone **Cisco UCS C220 M4** with **CIMC 4.1(2m)**.
 
