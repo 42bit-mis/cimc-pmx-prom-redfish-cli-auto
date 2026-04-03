@@ -15,7 +15,7 @@ cimc_network:
   dhcp: false
   hostname: 42bit-dc1-pve-cluster-001-cimc
   ipv4:
-    address: 10.42.72.244
+    address: 10.42.72.227
     netmask: 255.255.255.0
     gateway: 10.42.72.251
   dns_servers:
@@ -35,7 +35,7 @@ services:
     servers: []
 
 raid_config:
-  apply: false
+  apply: true
   controller_slot: SLOT-HBA
   set_os_boot_drive: true
   virtual_drives:
@@ -90,7 +90,7 @@ raid_config:
       read_policy: read_ahead
 
 boot_order:
-  apply: false
+  apply: true
   mode: precision
   devices:
     - name: os_raid
