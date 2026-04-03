@@ -1,0 +1,73 @@
+# CIMC verification report
+
+Generated from: {{ cimc_host }}
+
+## System
+- Model: {{ system_resource.json.Model | default('unknown') }}
+- Manufacturer: {{ system_resource.json.Manufacturer | default('unknown') }}
+- Serial: {{ system_resource.json.SerialNumber | default('unknown') }}
+- Power state: {{ system_resource.json.PowerState | default('unknown') }}
+- BIOS version: {{ system_resource.json.BiosVersion | default('unknown') }}
+
+## Manager
+- Firmware version: {{ manager_resource.json.FirmwareVersion | default('unknown') }}
+- DateTime: {{ manager_resource.json.DateTime | default('unknown') }}
+- UUID: {{ system_resource.json.UUID | default('unknown') }}
+
+## Management network
+- Hostname: {{ manager_eth_resource.json.HostName | default('unknown') }}
+- MAC: {{ manager_eth_resource.json.MACAddress | default('unknown') }}
+- Interface enabled: {{ manager_eth_resource.json.InterfaceEnabled | default('unknown') }}
+- IPv4 addresses:
+{% for ip in manager_eth_resource.json.IPv4Addresses | default([]) %}
+  - {{ ip.Address | default('unknown') }} / {{ ip.SubnetMask | default('unknown') }} gw={{ ip.Gateway | default('unknown') }} ({{ ip.AddressOrigin | default('unknown') }})
+{% else %}
+  - none reported
+{% endfor %}
+- DNS:
+{% for ns in manager_eth_resource.json.NameServers | default([]) %}
+  - {{ ns }}
+{% else %}
+  - none reported
+{% endfor %}
+
+## Network protocols
+- HTTP enabled: {{ network_protocol_resource.json.HTTP.ProtocolEnabled | default('unknown') }}
+- HTTPS enabled: {{ network_protocol_resource.json.HTTPS.ProtocolEnabled | default('unknown') }}
+- SSH enabled: {{ network_protocol_resource.json.SSH.ProtocolEnabled | default('unknown') }}
+- IPMI enabled: {{ network_protocol_resource.json.IPMI.ProtocolEnabled | default('unknown') }}
+- NTP enabled: {{ network_protocol_resource.json.NTP.ProtocolEnabled | default('unknown') }}
+- NTP servers:
+{% for ntp in network_protocol_resource.json.NTP.NTPServers | default([]) %}
+  - {{ ntp }}
+{% else %}
+  - none reported
+{% endfor %}
+
+## BIOS attributes
+- Boot mode: {{ bios_resource.json.Attributes.BootMode | default('not exposed') }}
+- Quiet boot: {{ bios_resource.json.Attributes.QuietBoot | default('not exposed') }}
+- Intel Turbo Boost: {{ bios_resource.json.Attributes.IntelTurboBoostTech | default('not exposed') }}
+
+## Storage
+{% if storage_collection.status == 200 %}
+- Storage members reported: {{ storage_collection.json['Members@odata.count'] | default(0) }}
+{% for member in storage_collection.json.Members | default([]) %}
+  - {{ member['@odata.id'] }}
+{% endfor %}
+{% else %}
+- Storage collection not returned by Redfish on this platform/firmware.
+{% endif %}
+
+## RAID status from CIMC CLI
+{% if raid_cli_json is defined %}
+- Controller slot: {{ raid_cli_json.controller_slot | default('unknown') }}
+- Virtual drives:
+{% for vd in raid_cli_json.virtual_drives | default([]) %}
+  - id={{ vd.id | default('?') }} name={{ vd.name | default('') }} size={{ vd.size | default('') }} raid={{ vd.raid_level | default('') }} boot={{ vd.boot_drive | default('') }}
+{% else %}
+  - none parsed
+{% endfor %}
+{% else %}
+- No CLI RAID status returned.
+{% endif %}

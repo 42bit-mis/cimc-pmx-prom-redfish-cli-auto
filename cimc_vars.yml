@@ -1,0 +1,110 @@
+---
+server:
+  hostname: 42bit-dc1-pve-cluster-001-cimc
+  description: 42bit DC1 Proxmox node 001
+  timezone: Europe/Vienna
+
+firmware_expected:
+  bios: C220M4.4.1.2f.0.1024230116
+  cimc: 4.1(2m)
+  vic: 4.4(1g)
+  raid: 24.12.1-0456.0
+
+cimc_network:
+  apply: false
+  dhcp: false
+  hostname: 42bit-dc1-pve-cluster-001-cimc
+  ipv4:
+    address: 10.42.72.244
+    netmask: 255.255.255.0
+    gateway: 10.42.72.251
+  dns_servers:
+    - 10.42.72.251
+    - 8.8.4.4
+
+services:
+  http_enabled: false
+  https_enabled: true
+  ssh_enabled: true
+  ipmi_enabled: true
+  ipmi_over_lan:
+    privilege_level: admin
+    channel_security_key: "62F9F1BCE17D3C4B97BC29056E01F2F54EF40A0E"
+  ntp:
+    enabled: false
+    servers: []
+
+raid_config:
+  apply: false
+  controller_slot: SLOT-HBA
+  set_os_boot_drive: true
+  virtual_drives:
+    - name: OS_RAID1
+      raid_level: raid1
+      disks: ["7", "8"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+    - name: CEPH01
+      raid_level: raid0
+      disks: ["1"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+    - name: CEPH02
+      raid_level: raid0
+      disks: ["2"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+    - name: CEPH03
+      raid_level: raid0
+      disks: ["3"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+    - name: CEPH04
+      raid_level: raid0
+      disks: ["4"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+    - name: CEPH05
+      raid_level: raid0
+      disks: ["5"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+    - name: CEPH06
+      raid_level: raid0
+      disks: ["6"]
+      size_gb: 0
+      strip_size_kb: 64
+      write_policy: write_back
+      read_policy: read_ahead
+
+boot_order:
+  apply: false
+  mode: precision
+  devices:
+    - name: os_raid
+      type: HDD
+      order: 1
+    - name: auto_pxe
+      type: PXE
+      order: 2
+      slot: L
+      port: 1
+    - name: auto_vmedia
+      type: "Virtual Media"
+      order: 3
+
+verify:
+  write_report: true
+  report_path: /tmp/cimc_redfish_verify.md

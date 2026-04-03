@@ -1,0 +1,15 @@
+---
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+
+      # Cisco CIMC access
+      cimc_host: 10.42.72.244
+      cimc_username: admin
+      cimc_password: maeloaFoo5chohsai6wo
+      cimc_verify_tls: false
+
+      # SSH CLI access to CIMC
+      cimc_ssh_host: 10.42.72.244
+      cimc_ssh_port: 22

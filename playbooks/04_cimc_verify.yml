@@ -1,0 +1,181 @@
+---
+- name: 04 - Verify Cisco CIMC using Redfish plus CLI RAID status
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../cimc_vars.yml
+  vars:
+    redfish_base: "https://{{ cimc_host }}/redfish/v1"
+
+  tasks:
+    - name: Create Redfish session
+      ansible.builtin.uri:
+        url: "{{ redfish_base }}/SessionService/Sessions"
+        method: POST
+        body_format: json
+        body:
+          UserName: "{{ cimc_username }}"
+          Password: "{{ cimc_password }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 201
+      register: redfish_session
+
+    - name: Store Redfish auth token
+      ansible.builtin.set_fact:
+        redfish_token: "{{ redfish_session.x_auth_token | default(redfish_session['x-auth-token']) }}"
+
+    - name: Query Redfish service root
+      ansible.builtin.uri:
+        url: "{{ redfish_base }}/"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: redfish_root
+
+    - name: Query Systems collection
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ redfish_root.json.Systems['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: systems_collection
+
+    - name: Query Managers collection
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ redfish_root.json.Managers['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: managers_collection
+
+    - name: Derive primary system and manager URIs
+      ansible.builtin.set_fact:
+        system_uri: "{{ systems_collection.json.Members[0]['@odata.id'] }}"
+        manager_uri: "{{ managers_collection.json.Members[0]['@odata.id'] }}"
+
+    - name: Query system resource
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ system_uri }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: system_resource
+
+    - name: Query manager resource
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_uri }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: manager_resource
+
+    - name: Query BIOS resource
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ system_resource.json.Bios['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: bios_resource
+
+    - name: Query manager Ethernet interfaces
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_resource.json.EthernetInterfaces['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: manager_eth_collection
+
+    - name: Query manager Ethernet interface details
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_eth_collection.json.Members[0]['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: manager_eth_resource
+
+    - name: Query manager network protocol details
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_resource.json.NetworkProtocol['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: network_protocol_resource
+
+    - name: Query storage collection if available
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ system_resource.json.Storage['@odata.id'] }}"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ redfish_token }}"
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: storage_collection
+      failed_when: false
+
+    - name: Query RAID status via CIMC CLI helper
+      ansible.builtin.command:
+        argv:
+          - python3
+          - ../scripts/cimc_cli.py
+          - raid-status
+          - --inventory
+          - ../inventory.yml
+          - --vars
+          - ../cimc_vars.yml
+      register: raid_cli
+      changed_when: false
+      failed_when: false
+
+    - name: Parse RAID CLI JSON if present
+      ansible.builtin.set_fact:
+        raid_cli_json: "{{ raid_cli.stdout | from_json }}"
+      when:
+        - raid_cli.rc == 0
+        - raid_cli.stdout is defined
+        - raid_cli.stdout | length > 0
+
+    - name: Write verification report
+      ansible.builtin.template:
+        src: ../templates/verification_report.md.j2
+        dest: "{{ verify.report_path }}"
+      when: verify.write_report | bool
+
+    - name: Display short verification summary
+      ansible.builtin.debug:
+        msg:
+          - "Model: {{ system_resource.json.Model | default('unknown') }}"
+          - "Serial: {{ system_resource.json.SerialNumber | default('unknown') }}"
+          - "Power: {{ system_resource.json.PowerState | default('unknown') }}"
+          - "BIOS: {{ system_resource.json.BiosVersion | default('unknown') }}"
+          - "Manager HostName: {{ manager_eth_resource.json.HostName | default('unknown') }}"
+          - "IPv4: {{ (manager_eth_resource.json.IPv4Addresses | default([]) | first).Address | default('unknown') }}"
+          - "Report: {{ verify.report_path if verify.write_report else 'disabled' }}"

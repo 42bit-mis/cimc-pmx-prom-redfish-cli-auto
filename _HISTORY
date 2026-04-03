@@ -1,0 +1,121 @@
+curl -vk --max-time 15 -u 'admin:XXXX' \
+  https://{CIMC_SERVER}/redfish/v1/
+
+  curl -vk --max-time 15 \
+  -H 'Content-Type: application/json' \
+  -d '{"UserName":"admin","Password":"XXXX"}' \
+  https://{CIMC_SERVER}/redfish/v1/SessionService/Sessions
+
+
+  curl -vk --max-time 15 \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"UserName":"admin","Password":"XXXX"}' \
+  https://{CIMC_SERVER}/redfish/v1/SessionService/Sessions
+
+  curl -skS --http1.1 --max-time 20 -D - \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{"UserName":"admin","Password":"XXXX"}' \
+  https://{CIMC_SERVER}/redfish/v1/SessionService/Sessions
+
+  curl -vk --max-time 15 -u 'admin:XXXX' \
+  https://{CIMC_SERVER}/redfish/v1/Systems
+
+curl -vk --max-time 15 -u 'admin:XXXX' \
+  https://{CIMC_SERVER}/redfish/v1/Managers
+
+#  Files ausführbar zu machhe
+
+  sudo chmod +x {file}
+
+# Logged in CIMC CLI
+
+  created virtual drive in scope / chassis / storagadapter
+  name for OS_RAID1
+  RAID1
+  CHOOSE THE 2 DISK ( 7,8)
+  SIZE (571250) // Like the Disk are
+  STRIPE_SIZE 64kb
+  DISC Cache Policy Unchanged
+  Read Policy 0
+  Write Policy 1 Write Back Good BBU
+  I/o Policy 0 direct
+  Access Policy 0 Read Write
+
+#   NEXT STEPS CREATE THE CEPHxx
+
+scope storageadapter SLOT-HBA. // SLOT-HBA is important!
+  name for CEPHxx
+  RAID0
+  CHOOSE THE 2 DISK ( x,x,x,x )
+  SIZE (xxxx) // Like the Disk are
+  STRIPE_SIZE 64kb
+  DISC Cache Policy Unchanged
+  Read Policy 0
+  Write Policy 1 Write Back Good BBU
+  I/o Policy 0 direct
+  Access Policy 0 Read Write
+
+# changed cimc_cli.py
+
+python3 -m py_compile scripts/cimc_cli.py // TO TEST THE PY
+
+# = NOTHING RETURN - PERFECT !
+
+# then the moment is now
+
+python3 scripts/cimc_cli.py raid-status --inventory inventory.yml --vars cimc_vars.yml
+
+# YES WE GOT IT 
+
+# Now set the boot device right on the CIMC CLI
+
+scope chassis
+scope storageadapter SLOT-HBA
+scope virtual-drive 0
+set-boot-drive
+commit
+
+# FOR REMOVE THE BOOT DRIVE 
+
+scope chassis
+scope storageadapter SLOT-HBA
+clear-boot-drive
+
+# Update the cimc_vars.yml
+
+raid_config:
+  apply: false
+  controller_slot: SLOT-HBA
+  set_os_boot_drive: true
+
+# CHECK THE BOOT
+
+scope chassis
+scope hdd
+show detail
+
+# THE ACTUALLY FILES ARE CONFIGURED TO MAKE MANUALLY THE RAIDS TO CHANGE THIS CHANGE
+
+raid_config:
+  apply: true
+
+# AND ALSO THE BOOT ORDER
+
+boot_config
+  apply: true
+
+# AND ALSO THE 02_cimc_raid_config.yml CHANGE THE VALUES TO
+
+raid_config.apply: false
+boot_order.apply: false
+
+# AND THEN AS FOR PRODUCTION RUN
+
+source .venv/bin/activate
+ansible-playbook playbooks/02_cimc_raid_config.yml
+ansible-playbook playbooks/03_cimc_boot_order.yml
+ansible-playbook playbooks/04_cimc_verify.yml
+
+# THE NEXT STEP FOR THE OTHER STORAGE LETS MAKE THE RAID CONFIG AUTOMATIC.  // 03.04.2026 12:30 AM

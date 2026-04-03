@@ -1,0 +1,143 @@
+---
+- name: 01 - Baseline Cisco CIMC using Redfish
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../cimc_vars.yml
+  vars:
+    redfish_base: "https://{{ cimc_host }}/redfish/v1"
+  tasks:
+    - name: Query Redfish root
+      ansible.builtin.uri:
+        url: "{{ redfish_base }}/"
+        method: GET
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: redfish_root
+
+    - name: Query Systems collection
+      ansible.builtin.uri:
+        url: "{{ redfish_base }}/Systems"
+        method: GET
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: systems_collection
+
+    - name: Query Managers collection
+      ansible.builtin.uri:
+        url: "{{ redfish_base }}/Managers"
+        method: GET
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: managers_collection
+
+    - name: Derive primary system and manager URIs
+      ansible.builtin.set_fact:
+        system_uri: "{{ systems_collection.json.Members[0]['@odata.id'] }}"
+        manager_uri: "{{ managers_collection.json.Members[0]['@odata.id'] }}"
+
+    - name: Query manager resource
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_uri }}"
+        method: GET
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: manager_resource
+
+    - name: Query manager Ethernet interface collection
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_resource.json.EthernetInterfaces['@odata.id'] }}"
+        method: GET
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        return_content: true
+        status_code: 200
+      register: manager_eth_collection
+
+    - name: Derive manager Ethernet interface and network protocol URIs
+      ansible.builtin.set_fact:
+        manager_eth_uri: "{{ manager_eth_collection.json.Members[0]['@odata.id'] }}"
+        network_protocol_uri: "{{ manager_resource.json.NetworkProtocol['@odata.id'] }}"
+
+    - name: Patch manager Ethernet interface
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ manager_eth_uri }}"
+        method: PATCH
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        body_format: json
+        status_code: [200, 202, 204]
+        body:
+          HostName: "{{ cimc_network.hostname }}"
+          DHCPv4:
+            DHCPEnabled: "{{ cimc_network.dhcp }}"
+            UseDNSServers: false
+            UseGateway: false
+            UseNTPServers: false
+            UseDomainName: false
+            UseStaticRoutes: false
+          IPv4Addresses:
+            - Address: "{{ cimc_network.ipv4.address }}"
+              SubnetMask: "{{ cimc_network.ipv4.netmask }}"
+              Gateway: "{{ cimc_network.ipv4.gateway }}"
+          StaticNameServers: "{{ cimc_network.dns_servers }}"
+      when: cimc_network.apply | bool
+
+    - name: Patch manager network protocol
+      ansible.builtin.uri:
+        url: "https://{{ cimc_host }}{{ network_protocol_uri }}"
+        method: PATCH
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ cimc_verify_tls }}"
+        body_format: json
+        status_code: [200, 202, 204]
+        body:
+          HTTP:
+            ProtocolEnabled: "{{ services.http_enabled }}"
+          HTTPS:
+            ProtocolEnabled: "{{ services.https_enabled }}"
+          SSH:
+            ProtocolEnabled: "{{ services.ssh_enabled }}"
+          IPMI:
+            ProtocolEnabled: "{{ services.ipmi_enabled }}"
+          NTP:
+            ProtocolEnabled: "{{ services.ntp.enabled }}"
+            NTPServers: "{{ services.ntp.servers }}"
+          Oem:
+            Cisco:
+              IPMIOverLan:
+                ChannelSecurityKey: "{{ services.ipmi_over_lan.channel_security_key }}"
+                PrivilegeLevelLimit: "{{ services.ipmi_over_lan.privilege_level }}"
+      when: cimc_network.apply | bool or services.ipmi_enabled | bool or services.ntp.enabled | bool
+
+    - name: Display discovered endpoints
+      ansible.builtin.debug:
+        msg:
+          - "Redfish root reachable on {{ cimc_host }}"
+          - "System URI: {{ system_uri }}"
+          - "Manager URI: {{ manager_uri }}"
+          - "Manager Ethernet URI: {{ manager_eth_uri }}"
+          - "NetworkProtocol URI: {{ network_protocol_uri }}"
+          - "cimc_network.apply={{ cimc_network.apply }}"
