@@ -19,6 +19,7 @@
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 201
+        timeout: 120
       register: redfish_session
 
     - name: Store Redfish auth token
@@ -29,8 +30,9 @@
       ansible.builtin.uri:
         url: "{{ redfish_base }}/"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -40,8 +42,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ redfish_root.json.Systems['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -51,8 +54,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ redfish_root.json.Managers['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -67,8 +71,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ system_uri }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -78,8 +83,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ manager_uri }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -89,8 +95,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ system_resource.json.Bios['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -100,8 +107,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ manager_resource.json.EthernetInterfaces['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -111,8 +119,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ manager_eth_collection.json.Members[0]['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -122,8 +131,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ manager_resource.json.NetworkProtocol['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
@@ -133,8 +143,9 @@
       ansible.builtin.uri:
         url: "https://{{ cimc_host }}{{ system_resource.json.Storage['@odata.id'] }}"
         method: GET
-        headers:
-          X-Auth-Token: "{{ redfish_token }}"
+        user: "{{ cimc_username }}"
+        password: "{{ cimc_password }}"
+        force_basic_auth: true
         validate_certs: "{{ cimc_verify_tls }}"
         return_content: true
         status_code: 200
